@@ -5,6 +5,7 @@ import io.netty.util.internal.StringUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
@@ -16,15 +17,18 @@ public class JwtTokenAuthenticationFilter implements WebFilter {
     //Bearer
     public static final String HEADER_PREFIX ="Bearer ";
 
-    private final JwtProvider jwtProvider;
+    private final JwtTokenProvider jwtTokenProvider;
 
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         //1. Get the request
         var token = resolveToken(exchange.getRequest());
-
-       return null;
+        if(StringUtils.hasText(token) && this.jwtTokenProvider.validateToken(token)){
+            var autenticantion = this.jwtTokenProvider.getAuthentication(token);
+            return chain.filter(exchange).contextWrite(ReactiveSecurityContextHolder.withAuthentication(autenticantion));
+        }
+       return chain.filter(exchange);
 
     }
 

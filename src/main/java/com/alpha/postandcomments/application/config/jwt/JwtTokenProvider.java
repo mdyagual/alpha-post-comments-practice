@@ -1,13 +1,14 @@
 package com.alpha.postandcomments.application.config.jwt;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
@@ -15,10 +16,12 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Date;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class JwtTokenProvider {
     //1. createToken - checked
     //2. validateToken
@@ -73,8 +76,22 @@ public class JwtTokenProvider {
                 : AuthorityUtils.NO_AUTHORITIES;
 
         //User
-        //return new UsernamePasswordAuthenticationToken();
-        return null;
+        var principal = new User(claims.getSubject(), "",authorities);
+
+        return new UsernamePasswordAuthenticationToken(principal,"",authorities);
+
+    }
+
+    public boolean validateToken(String token){
+        //call the claims
+        try{
+            var claims = Jwts.parserBuilder().setSigningKey(this.secretKey).build().parseClaimsJws(token);
+            log.info("Token is ok: Expiration time is "+claims.getBody().getExpiration().toString());
+            return true;
+        }catch(JwtException | IllegalArgumentException e){
+            log.info("Invalid token: "+e.getMessage());
+        }
+        return false;
 
     }
 
